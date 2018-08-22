@@ -34,6 +34,18 @@ path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/1dataUnderst
 ################################################################################################################################
 # Train model
 ################################################################################################################################
+
+###################################
+# Which performance metrics to choose ?
+###################################
+# Choosing a performance metric is a critical aspect, especially with imbalanced data. See Eika model file for more
+
+###################################
+# Do we need methods to treat imbalanced datasets? See Eika model file for more
+###################################
+
+
+
 # See for xgboost:
 # https://cran.r-project.org/web/packages/xgboost/vignettes/discoverYourData.html#build-the-model
 

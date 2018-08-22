@@ -34,11 +34,12 @@ raw_filename <- "application_train.csv"
 #Read data
 raw_data <- read.csv(paste0(raw_path, "/", raw_filename),
                      sep = ",", dec=".", stringsAsFactors = F)
+df <- raw_data
 
 #Quick QA if reading went ok-ish (make sure its the same as in Data Understanding)
-dim(raw_data)
-head(raw_data)
-View(raw_data)
+dim(df)
+head(df)
+View(df)
 
 
 ################################################################################################################################
