@@ -64,6 +64,12 @@ path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/1dataUnderst
 #*** https://www.analyticsvidhya.com/blog/2016/03/complete-guide-parameter-tuning-xgboost-with-codes-python
 
 
+###########
+# More
+###########
+# http://topepo.github.io/caret/measuring-performance.html
+
+
 
 ################################################################################################################################
 # OUTPUT

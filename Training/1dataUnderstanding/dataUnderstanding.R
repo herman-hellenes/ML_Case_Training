@@ -8,21 +8,27 @@
 ############################################
 # Mission description
 ############################################
-# Goal: This script does ..., in order to:
+# Goal: This script does investigate the data, in order to understand how it can drive business value:
 #      1: ...
 #      2: ...
 
 # Questions: 
 #     - ...
 
+# Assumptions
+
 # Todo
 #     - ...
 
+# Resources
+#     - http://topepo.github.io/caret/index.html
+
 # Output:
-#     - ...
+#     - Basis for a report only, no data generation, formatting etc.
 
 
-require(data.table)
+library(data.table)
+library(caret)
 
 
 ################################################################################################################################
@@ -30,11 +36,15 @@ require(data.table)
 ################################################################################################################################
 raw_path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/raw_homeCredit/application_train"
 raw_filename <- "application_train.csv"
+# raw_path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Fra eirik/drive-download-20180823T005147Z-001"
+# raw_filename <- "ml_case_test_hist_data.csv"
+# raw_filename <- "ml_case_test_data.csv"
 
 #Read data
 raw_data <- read.csv(paste0(raw_path, "/", raw_filename),
                      sep = ",", dec=".", stringsAsFactors = F)
 df <- raw_data
+
 ################################################################################################################################
 # Data understanding
 ################################################################################################################################
@@ -42,7 +52,8 @@ df <- raw_data
 dim(df)
 head(df)
 str(df) # give a quick overview - like head but state the type as well
-View(df) # spend quite some time here - try to segment columns into different groups and have this sheet open when doing the below
+fix(df) #spend quite some time here - try to segment columns into different groups and have this sheet open when doing the below
+utils::View(df) # Can also do View(), however not always View give out all the columns. I thin fix() is a bit nicer
 table(df$TARGET) 
 
 
@@ -55,6 +66,64 @@ unique(df$NAME_CONTRACT_TYPE)
 unique(df$CODE_GENDER) 
 unique(df$FLAG_OWN_CAR) 
 
+###########
+# Small dataprep - Making a numerical dataframe, in order to do further analysis
+###########
+dfnum <- data.table(df) 
+dmy <- dummyVars(" ~ .", data = dfnum) #from caret -> making dummy vars
+dfnum <- data.frame(predict(dmy, newdata = dfnum))
+dim(dfnum)
+str(dfnum)
+
+
+###########
+# Distribution and Extreme values
+###########
+sub_num <- dfnum[sapply(dfnum, is.numeric)]
+sapply(sub_num, function(x) sum(is.na(x)))
+sapply(sub_num, FUN = function(x) quantile(x, seq(0,1,0.1), na.rm = T)) #MÅ TA VEKK NON-numeric vars (går bare på disse)
+sapply(sub_num, FUN = function(x) quantile(x, seq(0.99,1,0.001),na.rm = T))
+#looks ok
+
+# Visualization (see http://topepo.github.io/caret/visualizations.html for understanding below)
+###
+# Scatterplot Matrix
+library(AppliedPredictiveModeling)
+library(caret)
+transparentTheme(trans = .4)
+
+df_for_plot <- dfnum[1:1000, c("AMT_CREDIT","AMT_ANNUITY","REGION_POPULATION_RELATIVE")] #must do some formatting in order to use featurePlot
+df_for_plot$TARGET <- dfnum[1:1000, 2]
+df_for_plot$TARGET <- as.factor(df_for_plot$TARGET)
+
+featurePlot(x = df_for_plot[,1:3], 
+            y = df_for_plot[, 4], 
+            plot = "pairs",
+            ## Add a key at the top
+            auto.key = list(columns = 2))
+
+# Overlayed Density Plots
+featurePlot(x = df_for_plot[,1:3], 
+            y = df_for_plot[,4],
+            plot = "density", 
+            ## Pass in options to xyplot() to 
+            ## make it prettier
+            scales = list(x = list(relation="free"), 
+                          y = list(relation="free")), 
+            adjust = 1.5, 
+            pch = "|", 
+            layout = c(4, 1), 
+            auto.key = list(columns = 2))
+
+# Box Plots
+featurePlot(x = df_for_plot[,1:3], 
+            y = df_for_plot[,4], 
+            plot = "box", 
+            ## Pass in options to bwplot() 
+            scales = list(y = list(relation="free"),
+                          x = list(rot = 90)),  
+            layout = c(4,1 ), 
+            auto.key = list(columns = 2))
 
 ################################################################################################################################
 # Data quality 
@@ -71,30 +140,37 @@ table(df$TARGET)
 ###########
 # Look for missing values
 ###########
+summary(df)
 
 ###########
 # Look for 0 variance columns
 ###########
 # Looking for variables with none or little variance
-nzv <- nearZeroVar(df.validbanks.segment, saveMetrics= TRUE)
+nzv <- nearZeroVar(df, saveMetrics= TRUE)
+
 nzv[nzv$nzv,][,]
 
 # Inspection of near-zero variance
 for(i in 1:dim(nzv[nzv$nzv,][,])[1]){
-  if(dim(table(df.validbanks.segment[,rownames(nzv[nzv$nzv,][,])[i]]))[1] < 15){
+  if(dim(table(df[,rownames(nzv[nzv$nzv,][,])[i]]))[1] < 15){
     print(rownames(nzv[nzv$nzv,][,])[i])
-    print(table(df.validbanks.segment[,rownames(nzv[nzv$nzv,][,])[i]], df.validbanks.segment$target_var_save))
+    print(table(df[,rownames(nzv[nzv$nzv,][,])[i]], df$TARGET))
   }
 }
 
+# df <- data.table(df)
+# filteredDescr <- df[, -nzv]
+# dim(df)
+# dim(filteredDescr) 
+
 ###########
-# Extreme values
+# Identifying Correlated Predictors
 ###########
-sapply(sub_num, function(x) sum(is.na(x)))
-sub_num <- df.validbanks.segment[sapply(df.validbanks.segment, is.numeric)]
-sapply(sub_num, FUN = function(x) quantile(x, seq(0,1,0.1))) #MÅ TA VEKK NON-numeric vars (går bare på disse)
-sapply(sub_num, FUN = function(x) quantile(x, seq(0.99,1,0.001)))
-#looks ok
+descrCor <-  cor(dfnum)
+highCorr <- sum(abs(descrCor[upper.tri(descrCor)]) > .999)
+summary(descrCor[upper.tri(descrCor)])
+
+
 
 ############################################
 # Data Exploration and Data Quality report  
