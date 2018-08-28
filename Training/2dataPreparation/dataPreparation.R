@@ -28,25 +28,25 @@ require(data.table)
 ################################################################################################################################
 # INPUT
 ################################################################################################################################
-raw_path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/raw_homeCredit/application_train"
-raw_filename <- "application_train.csv"
+input_path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/1dataUnderstanding/df_pre_prepped.csv"
 
 #Read data
-raw_data <- read.csv(paste0(raw_path, "/", raw_filename),
+input_data <- read.csv(input_path,
                      sep = ",", dec=".", stringsAsFactors = F)
-df <- raw_data
-
+df <- input_data
+df <- data.frame(df)
 #Quick QA if reading went ok-ish (make sure its the same as in Data Understanding)
 dim(df)
 head(df)
 View(df)
+str(df)
 
 
 ################################################################################################################################
 # Data Preparation 
 ################################################################################################################################
-
-
+df <- as.data.frame(lapply(df, as.numeric))
+str(df)
 ############################################
 # Data cleaning 
 ############################################
@@ -116,6 +116,8 @@ table(df.validbanks.segment$target_var_save) #104049  10070
 # df[,AgeCat:= as.factor(ifelse(Age > 30, "Old", "Young"))]
 # Note that these are very correlated. However when using decision threes, this is not that big issue
 
+# See https://www.analyticsvidhya.com/blog/2016/01/guide-data-exploration/#one
+
 ##################
 # Encoding categorical features (transform the categorical data to dummy variables etc.)
 ##################
@@ -134,7 +136,7 @@ table(df.validbanks.segment$target_var_save) #104049  10070
 
 
 ############################################
-# Format Data
+# Preprocess / Format Data
 ############################################
 # Look here if have to prepare for xgboost (e.g. Xgboost manages only numeric vectors, 
 # so must convert categorical variables to numeric one etc.):
@@ -142,15 +144,51 @@ table(df.validbanks.segment$target_var_save) #104049  10070
 #   - https://www.analyticsvidhya.com/blog/2016/01/xgboost-algorithm-easy-steps/
 str(df)
 
+# Centering and Scaling (http://topepo.github.io/caret/pre-processing.html#the-preprocess-function)
+##
+library(caret)
+preProcValues <- preProcess((df[,!(colnames(df) %in% c("SK_ID_CURR", "TARGET"))]), method = c("center", "scale"))
+trainTransformed <- predict(preProcValues, df)
+
+# Imputation
+##
+
+# Transforming Predictors
+##
+#In some cases, there is a need to use principal component analysis (PCA) to transform 
+#the data to a smaller sub-space where the new variable are uncorrelated with one another
+# See: http://topepo.github.io/caret/pre-processing.html#the-preprocess-function
+
+
+############################################
+# Data Splitting
+############################################
+# createDataPartition for example.. See http://topepo.github.io/caret/data-splitting.html
+
+set.seed(3456)
+trainIndex <- createDataPartition(df$TARGET, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+head(trainIndex)
+
+dfTrain <- df[ trainIndex,]
+dfTest  <- df[-trainIndex,]
+dim(dfTrain)
+dim(dfTest)
+table(dfTrain$TARGET)
+table(dfTest$TARGET)
 
 ################################################################################################################################
 # OUTPUT
 ################################################################################################################################
 # Setting path and current file
 path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/raw_homeCredit/2dataPreparation/"
-filename <- "prepared_data.R"
+filename_train <- "prepared_data_train.R"
+filename_test <- "prepared_data_test.R"
+
 setwd(path)
-system('pwd -P')
+getwd()
+#system('pwd -P')
 
 # Loading versions
 library(git2r)
