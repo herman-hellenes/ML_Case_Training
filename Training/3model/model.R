@@ -299,7 +299,8 @@ full.train = train(
   metric = "ROC"
 )
 time_end_cv_tuning <- (Sys.time()-start_time_cv_tuning)
-print(time_end_cv_tuning)
+print(time_end_cv_tuning) # Time difference of 1.090792 hours
+
 #Should also try metric = "Kappa"
 
 # Check result
@@ -312,6 +313,12 @@ ggplot(full.train$results, aes(x = as.factor(eta), y = max_depth, size = ROC, co
 
 trellis.par.set(caretTheme())
 densityplot(full.train, pch = "|")
+
+# Distribution of ROC in the resamples
+histogram(full.train$resample$ROC)
+
+# ROC as function of tuning params
+plot(full.train)
 
 
 #####
@@ -334,14 +341,28 @@ whichTwoPct <- tolerance(full.train$results, metric = "ROC",
                          tol = 2, maximize = TRUE)  
 cat("best model within 2 pct of best:\n")
 full.train$results[whichTwoPct,1:6]
+full.train$finalModel
+final.model <- full.train$finalModel
 
-final.model<- full.train$finalModel
 
-# Distribution of ROC in the resamples
-histogram(final.model$resample$ROC)
+# Test final model
+finalpred <- predict (final.model,dtest)
+finalpred_bin <- ifelse (finalpred > 0.4,1,0)
+confusionMatrix (as.factor(finalpred_bin), as.factor(ts_label))
 
-# ROC as function of tuning params
-plot(final.model)
+final.pred.roc <- ROCR::prediction(finalpred, ts_label, 
+                             label.ordering = c("0","1")) #ok takes Positive Class = 1
+preformance.roc.final <- performance(final.pred.roc, "tpr","fpr")
+plot(preformance.roc.final, col="black", lty=3, lwd=3)
+auc <- performance(final.pred.roc,"auc")
+auc <- unlist(slot(auc, "y.values"))
+minauc<-min(round(auc, digits = 4))
+maxauc<-max(round(auc, digits = 4))
+minauct <- paste(c("min(AUC) = "),minauc,sep="")
+maxauct <- paste(c("max(AUC) = "),maxauc,sep="")
+legend(0.35,0.6,c(minauct,maxauct,"\n"),border="white",cex=1.4,box.col = "white")
+
+
 
 ################################################################################################################################
 # Model assessment 
@@ -392,27 +413,32 @@ plot(final.model)
 ################################################################################################################################
 # OUTPUT
 ################################################################################################################################
+save.path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/3model/"
 
-# Save OPT_Res (for evaluation)
-filename.OPT_Res <- paste0("C:/Users/h803499/Documents",
-                           format(Sys.time(), "%Y-%m-%d_%H%M%S_"))
-saveRDS(OPT_Res, file=filename.OPT_Res) # Load it with readRDS(filename.OPT_Res)
-
-
-# Save the optimal model
-filename.xgb.optimal <- paste0("C:/Users/h803499/Documents",
+# Save full.train: param search full model - caret
+filename.full.train <- paste0(save.path,
+                               "fullTrain",
                                format(Sys.time(), "%Y-%m-%d_%H%M%S_"))
-xgb.save(model.xgb.optimal, filename.xgb.optimal)
+saveRDS(full.train, filename.full.train) #caret
+# Backup
+saveRDS(full.train, paste0(filename.full.train,".rds")) #caret
 
+
+# Save final.model: the optimal model
+filename.finalModel <- paste0(save.path,
+                               "finalModel",
+                               format(Sys.time(), "%Y-%m-%d_%H%M%S_"))
+xgb.save(final.model, filename.finalModel)
+# Backup
+saveRDS(final.model, paste0(filename.finalModel,".rds")) #caret
 
 # Save Params
 save.params <- list()
-save.params$input.params <- parameter.lib
-save.params$output.params <- output.lib
-save.params$output.params$filename.xgb.optimal <- filename.xgb.optimal
-save.params$output.params$filename.OPT_Res <- filename.OPT_Res
+save.params$xgb.grid <- xgb.grid
+save.params$filename.finalModel <- filename.finalModel
+save.params$full.train <- full.train
 
-filename.save.params <- paste0("C:/Users/h803499/Documents/",
+filename.save.params <- paste0(save.path,"params",
                                format(Sys.time(), "%Y-%m-%d_%H%M%S_"))
 saveRDS(save.params, file=filename.save.params) # Load it with readRDS(filename.save.params)
 

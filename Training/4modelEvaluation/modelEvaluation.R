@@ -45,8 +45,7 @@ dfTest <- input_dataTest
 
 # Load Models
 path_model <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/3model/"
-
-xgb.train.loaded <- readRDS(path_model)
+final.xgb.loaded <- readRDS(paste0(path_model,"finalModel2018-08-30_163857_.rds"))
 
 
 ###################
