@@ -36,9 +36,6 @@ library(caret)
 ################################################################################################################################
 raw_path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/raw_homeCredit/application_train"
 raw_filename <- "application_train.csv"
-# raw_path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Fra eirik/drive-download-20180823T005147Z-001"
-# raw_filename <- "ml_case_test_hist_data.csv"
-# raw_filename <- "ml_case_test_data.csv"
 
 #Read data
 raw_data <- read.csv(paste0(raw_path, "/", raw_filename),
@@ -352,9 +349,9 @@ sum(duplicated(df$SK_ID_CURR))
 unique(df$TARGET) 
 table(df$TARGET) 
 
-###########
+#################################
 # Missing values
-###########
+#################################
 col.na.overview <- sapply(dfnum, function(x) sum(is.na(x)))
 sort(col.na.overview)
 
@@ -561,9 +558,9 @@ summary(df_clean)
 # - Predictive Techniques (e.g. regression)
 # See the libraries Amelia, MICE, missForest in https://medium.com/coinmonks/dealing-with-missing-data-using-r-3ae428da2d17
 
-###########
+#################################
 # Look for 0 variance columns
-###########
+#################################
 # Looking for variables with none or little variance
 nzv <- nearZeroVar(df_clean, saveMetrics= TRUE)
 
@@ -600,10 +597,12 @@ dim(df_clean)
 dim(filteredDescr) 
 dim(filteredDescr[filteredDescr$nzv == -1,])
 df_nzv <- subset(df_clean, select=(!colnames(df_clean)%in%(rownames(filteredDescr[filteredDescr$nzv == -1,]))))
-df_nzv <- data.frame(df_nzv)                 
-###########
+df_nzv <- data.frame(df_nzv)  
+
+
+#################################
 # Identifying Correlated Predictors (http://topepo.github.io/caret/pre-processing.html#corr)
-###########
+#################################
 descrCor <-  cor(df_nzv)
 highCorr <- sum(abs(descrCor[upper.tri(descrCor)]) > .999)
 summary(descrCor[upper.tri(descrCor)])
@@ -624,9 +623,9 @@ summary(descrCor[upper.tri(descrCor)])
 # See https://www.analyticsvidhya.com/blog/2016/01/guide-data-exploration/#one
 
 
-###########
+#################################
 # Linear Dependencies (http://topepo.github.io/caret/pre-processing.html#corr)
-###########
+#################################
 # with df_nzv_corr
 comboInfo <- findLinearCombos(df_nzv_corr) #dont work with NA
 df_nzv_corr <- data.frame(df_nzv_corr)
@@ -652,9 +651,9 @@ summary(descrCor[upper.tri(descrCor_after2)])
 summary(descrCor[upper.tri(descrCor)])
 #improve?
 
-############################################
+####################################################################################################################################
 # Data Exploration and Data Quality report  
-############################################
+####################################################################################################################################
 # Here make a wrap up of the data: both the quality and what the data tell us already now
 df_final <- df_nzv_corr_lin #or df_nzv?
 View(df_final)

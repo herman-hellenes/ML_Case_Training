@@ -22,8 +22,8 @@
 #     - ...
 
 
-require(data.table)
-
+library(data.table)
+library(caret)
 
 ################################################################################################################################
 # INPUT
@@ -35,7 +35,7 @@ input_data <- read.csv(input_path,
                      sep = ",", dec=".", stringsAsFactors = F)
 df <- input_data
 df <- data.frame(df)
-#Quick QA if reading went ok-ish (make sure its the same as in Data Understanding)
+#Quick QA if reading went ok (make sure its the same as in Data Understanding)
 dim(df)
 head(df)
 View(df)
@@ -146,7 +146,6 @@ str(df)
 
 # Centering and Scaling (http://topepo.github.io/caret/pre-processing.html#the-preprocess-function)
 ##
-library(caret)
 preProcValues <- preProcess((df[,!(colnames(df) %in% c("SK_ID_CURR", "TARGET"))]), method = c("center", "scale"))
 trainTransformed <- predict(preProcValues, df)
 
@@ -163,8 +162,9 @@ trainTransformed <- predict(preProcValues, df)
 ############################################
 # Data Splitting
 ############################################
-# createDataPartition for example.. See http://topepo.github.io/caret/data-splitting.html
+# See http://topepo.github.io/caret/data-splitting.html
 
+# Simple Splitting Based on the Outcome
 set.seed(3456)
 trainIndex <- createDataPartition(df$TARGET, p = .8, 
                                   list = FALSE, 
@@ -177,6 +177,13 @@ dim(dfTrain)
 dim(dfTest)
 table(dfTrain$TARGET)
 table(dfTest$TARGET)
+
+# Splitting Based on the Predictors
+# - We may want to create a sub-sample from B that is diverse when compared to A.
+
+# Data Splitting for Time Series
+
+# Simple Splitting with Important Groups
 
 ################################################################################################################################
 # OUTPUT
@@ -200,4 +207,7 @@ filename_test <- "prepared_data_test"
 # filename_full <- paste0(path, filename, current.commit, current.branch, format(Sys.time(), "%Y-%m-%d_%H%M%S_"))
 filename_full_train <- paste0(path, filename_train, format(Sys.time(), "%Y-%m-%d_%H%M%S_"),".csv")
 filename_full_test <- paste0(path, filename_test, format(Sys.time(), "%Y-%m-%d_%H%M%S_"),".csv")
+
+write.csv(dfTrain,file = filename_full_train, row.names=FALSE )
+write.csv(dfTest,file = filename_full_test, row.names=FALSE )
 
