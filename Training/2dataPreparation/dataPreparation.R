@@ -182,19 +182,22 @@ table(dfTest$TARGET)
 # OUTPUT
 ################################################################################################################################
 # Setting path and current file
-path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/raw_homeCredit/2dataPreparation/"
-filename_train <- "prepared_data_train.R"
-filename_test <- "prepared_data_test.R"
+path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/2dataPreparation/"
+filename_train <- "prepared_data_train"
+filename_test <- "prepared_data_test"
 
-setwd(path)
-getwd()
-#system('pwd -P')
+# setwd(path)
+# getwd()
+# #system('pwd -P')
+# 
+# # Loading versions
+# library(git2r)
+# current.commit <- system("git rev-parse HEAD",  intern = TRUE)
+# current.branch <- system(paste("git branch --contains ", current.commit),  intern = TRUE)
+# #current.r.version <- system("r --version", , intern = TRUE)[1]
+# #current.git.version <- system("git --version", intern = TRUE)
 
-# Loading versions
-library(git2r)
-current.commit <- system("git rev-parse HEAD",  intern = TRUE)
-current.branch <- system(paste("git branch --contains ", current.commit),  intern = TRUE)
-#current.r.version <- system("r --version", , intern = TRUE)[1]
-#current.git.version <- system("git --version", intern = TRUE)
+# filename_full <- paste0(path, filename, current.commit, current.branch, format(Sys.time(), "%Y-%m-%d_%H%M%S_"))
+filename_full_train <- paste0(path, filename_train, format(Sys.time(), "%Y-%m-%d_%H%M%S_"),".csv")
+filename_full_test <- paste0(path, filename_test, format(Sys.time(), "%Y-%m-%d_%H%M%S_"),".csv")
 
-filename_full <- paste0(path, filename, current.commit, current.branch, format(Sys.time(), "%Y-%m-%d_%H%M%S_"))
