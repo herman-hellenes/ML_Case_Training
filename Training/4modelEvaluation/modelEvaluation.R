@@ -46,7 +46,7 @@ dfTest <- input_dataTest
 # Load Models
 path_model <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/3model/"
 final.xgb.loaded <- readRDS(paste0(path_model,"finalModel2018-08-30_163857_.rds"))
-
+xgb.load
 
 ###################
 # Quick formatting
@@ -92,14 +92,14 @@ dtest  <- xgb.DMatrix(data = new_ts,label = ts_label)
 # Main
 ################################################################################################################################
 # Predict
-model.pred <- predict(xgb.train.loaded, new_ts)
+model.pred <- predict(final.xgb.loaded, dtest)
 
 
 ###########
 # AUC
 ###########
 # True positive vs flase positive
-pred.roc <- ROCR::prediction(model.optimal.pred, test$target_var_save, 
+pred.roc <- ROCR::prediction(model.pred, ts_label, 
                              label.ordering = c("0","1")) #ok takes Positive Class = 1
 preformance.roc <- performance(pred.roc, "tpr","fpr")
 plot(preformance.roc, col="black", lty=3, lwd=3)
