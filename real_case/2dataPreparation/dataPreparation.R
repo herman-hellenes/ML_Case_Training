@@ -2,15 +2,13 @@
 # __version__ = "1.0"
 # __maintainer__ = "Herman Hellenes"
 # __email__ = "herman.hellenes@gmail.com"
-# __creation__ = "22/08/2018"
+# __creation__ = "01/09/2018"
 # __status__ = "Production"
 
 ############################################
 # Mission description
 ############################################
-# Goal: This script does ..., in order to:
-#      1: ...
-#      2: ...
+# Goal: This script does the final data prep, in order to pass it to the modelling part
 
 # Questions: 
 #     - ...
@@ -28,7 +26,7 @@ library(caret)
 ################################################################################################################################
 # INPUT
 ################################################################################################################################
-input_path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/1dataUnderstanding/df_pre_prepped.csv"
+input_path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/real_case/1dataUnderstanding/prepped_data_2018-09-01_111925_.csv"
 
 #Read data
 input_data <- read.csv(input_path,
@@ -45,14 +43,20 @@ str(df)
 ################################################################################################################################
 # Data Preparation 
 ################################################################################################################################
+id.col <- df$id
+df$id <- NULL
+# Check if unique ID - if not do something!
+sum(duplicated(id.col))
+
 df <- as.data.frame(lapply(df, as.numeric))
 str(df)
+
 ############################################
 # Data cleaning 
 ############################################
 
 # Check if unique ID - if not do something!
-unique(df$ID)
+#unique(df$ID)
 
 ###########
 # Treat missing values
@@ -71,20 +75,20 @@ unique(df$ID)
 ###########
 
 # Looking for variables with none or little variance
-nzv <- nearZeroVar(df.validbanks.segment, saveMetrics= TRUE)
-nzv[nzv$nzv,][,]
-
-# No-variance is deleted (only one value in the whole set)
-df.validbanks.segment[, rownames(nzv[nzv$zeroVar,][,])] <- NULL 
-rownames(nzv[nzv$zeroVar,][,])
-
-# Inspection of near-zero variance
-for(i in 1:dim(nzv[nzv$nzv,][,])[1]){
-  if(dim(table(df.validbanks.segment[,rownames(nzv[nzv$nzv,][,])[i]]))[1] < 15){
-    print(rownames(nzv[nzv$nzv,][,])[i])
-    print(table(df.validbanks.segment[,rownames(nzv[nzv$nzv,][,])[i]], df.validbanks.segment$target_var_save))
-  }
-}
+# nzv <- nearZeroVar(df.validbanks.segment, saveMetrics= TRUE)
+# nzv[nzv$nzv,][,]
+# 
+# # No-variance is deleted (only one value in the whole set)
+# df.validbanks.segment[, rownames(nzv[nzv$zeroVar,][,])] <- NULL 
+# rownames(nzv[nzv$zeroVar,][,])
+# 
+# # Inspection of near-zero variance
+# for(i in 1:dim(nzv[nzv$nzv,][,])[1]){
+#   if(dim(table(df.validbanks.segment[,rownames(nzv[nzv$nzv,][,])[i]]))[1] < 15){
+#     print(rownames(nzv[nzv$nzv,][,])[i])
+#     print(table(df.validbanks.segment[,rownames(nzv[nzv$nzv,][,])[i]], df.validbanks.segment$target_var_save))
+#   }
+# }
 
 ###########
 # Remove extreme values 
@@ -94,14 +98,6 @@ for(i in 1:dim(nzv[nzv$nzv,][,])[1]){
 ###########
 # Check in on Volume
 ###########
-dim(df.loaded) #874536
-dim(df.validbanks) #157010
-dim(df.validbanks.segment.store) # 140213 take away Fødselsnummer
-dim(df.validbanks.segment) #114119 (takes away "Fødselsnummer" and "Alder")
-table(df.validbanks.segment$target_var_save) #104049  10070 
-
-
-# Ok, dim above is correct 
 
 
 ############################################
@@ -146,9 +142,9 @@ str(df)
 
 # Centering and Scaling (http://topepo.github.io/caret/pre-processing.html#the-preprocess-function)
 ##
-preProcValues <- preProcess((df[,!(colnames(df) %in% c("SK_ID_CURR", "TARGET"))]), method = c("center", "scale"))
+preProcValues <- preProcess((df[,!(colnames(df) %in% c("churn"))]), method = c("center", "scale"))
 trainTransformed <- predict(preProcValues, df)
-
+summary(trainTransformed)
 # Imputation
 ##
 
@@ -164,19 +160,34 @@ trainTransformed <- predict(preProcValues, df)
 ############################################
 # See http://topepo.github.io/caret/data-splitting.html
 
+#UST SPLIT THE TRAINING SET INTO A TRAIN AND TEST (as we dont have churn var in test set )
+
 # Simple Splitting Based on the Outcome
 set.seed(3456)
-trainIndex <- createDataPartition(df$TARGET, p = .8, 
+trainIndex <- createDataPartition(df$churn, p = .8, 
                                   list = FALSE, 
                                   times = 1)
-head(trainIndex)
 
 dfTrain <- df[ trainIndex,]
 dfTest  <- df[-trainIndex,]
 dim(dfTrain)
 dim(dfTest)
-table(dfTrain$TARGET)
-table(dfTest$TARGET)
+table(dfTrain$churn)
+table(dfTest$churn)
+
+trainTransformedIndex <- createDataPartition(trainTransformed$churn, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+
+dfTrainTransformed <- trainTransformed[ trainIndex,]
+dfTestTransformed  <- trainTransformed[-trainIndex,]
+dim(dfTrainTransformed)
+dim(dfTestTransformed)
+table(dfTrainTransformed$churn)
+table(dfTestTransformed$churn)
+
+
+
 
 # Splitting Based on the Predictors
 # - We may want to create a sub-sample from B that is diverse when compared to A.
@@ -189,25 +200,24 @@ table(dfTest$TARGET)
 # OUTPUT
 ################################################################################################################################
 # Setting path and current file
-path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/2dataPreparation/"
+path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/real_case/2dataPreparation/"
 filename_train <- "prepared_data_train"
 filename_test <- "prepared_data_test"
 
-# setwd(path)
-# getwd()
-# #system('pwd -P')
-# 
-# # Loading versions
-# library(git2r)
-# current.commit <- system("git rev-parse HEAD",  intern = TRUE)
-# current.branch <- system(paste("git branch --contains ", current.commit),  intern = TRUE)
-# #current.r.version <- system("r --version", , intern = TRUE)[1]
-# #current.git.version <- system("git --version", intern = TRUE)
-
-# filename_full <- paste0(path, filename, current.commit, current.branch, format(Sys.time(), "%Y-%m-%d_%H%M%S_"))
 filename_full_train <- paste0(path, filename_train, format(Sys.time(), "%Y-%m-%d_%H%M%S_"),".csv")
 filename_full_test <- paste0(path, filename_test, format(Sys.time(), "%Y-%m-%d_%H%M%S_"),".csv")
 
 write.csv(dfTrain,file = filename_full_train, row.names=FALSE )
 write.csv(dfTest,file = filename_full_test, row.names=FALSE )
+
+#Transformed
+filename_trainTr <- "prepared_data_train_trans"
+filename_testTr <- "prepared_data_test_trans"
+
+filename_full_train_trans <- paste0(path, filename_trainTr, format(Sys.time(), "%Y-%m-%d_%H%M%S_"),".csv")
+filename_full_test_trans <- paste0(path, filename_testTr, format(Sys.time(), "%Y-%m-%d_%H%M%S_"),".csv")
+
+write.csv(dfTrainTransformed,file = filename_full_train_trans, row.names=FALSE )
+write.csv(dfTestTransformed,file = filename_full_test_trans, row.names=FALSE )
+
 

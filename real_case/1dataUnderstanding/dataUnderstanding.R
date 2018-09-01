@@ -641,66 +641,100 @@ trainHistdfEdit.Done <- trainHistdfEdit.Done[!is.na(trainHistdfEdit.Done$price_t
 trainHistdfEdit.Done <- trainHistdfEdit.Done[!is.na(trainHistdfEdit.Done$price_tot_fix_12),]
 trainHistdfEdit.Done <- trainHistdfEdit.Done[!is.na(trainHistdfEdit.Done$price_tot_fix_1),]
 
-CONT HERE -> merge 
-df_final_temp <- join(trainHistdfEdit.Done, df_clean_corr_lin, by = "id", type = "left", match = "all")
-
+df_final_temp <- join(df_clean_corr_lin, trainHistdfEdit.Done, by = "id", type = "inner", match = "all")
 dim(trainHistdfEdit.Done)
+dim(df_clean_corr_lin)
+dim(df_final_temp)
+summary(df_final_temp)
 
-left 
 
 ####
 # Remove extreme values
 ####
+sapply(df_final_temp[,!(colnames(df_final_temp) %in% c("id"))], FUN = function(x) quantile(x, seq(0.99,1,0.001),na.rm = T))
+# Potential issues: net_margin, imp_cons, forecast_cons_12m forecast_cons_year forecast_meter_rent_12m cons_12m cons_last_month
+#net margin
+plot(df_final_temp$net_margin)
+View(df_final_temp[df_final_temp$net_margin == max(df_final_temp$net_margin),]) #has churned
+df_final_extreme <- df_final_temp[!(df_final_temp$net_margin == max(df_final_temp$net_margin)),]
+plot(df_final_extreme$net_margin)
+df_final_extreme <- df_final_extreme[!(df_final_extreme$net_margin == max(df_final_extreme$net_margin)),]
 
+plot(df_final_extreme$imp_cons)
+df_final_extreme <- df_final_extreme[!(df_final_extreme$imp_cons == min(df_final_extreme$imp_cons)),]
+
+plot(df_final_extreme$forecast_cons_12m)
+plot(df_final_extreme$forecast_cons_year)
+plot(df_final_extreme$forecast_meter_rent_12m)
+df_final_extreme <- df_final_extreme[!(df_final_extreme$forecast_meter_rent_12m == max(df_final_extreme$forecast_meter_rent_12m)),]
+
+plot(df_final_extreme$cons_12m)
+df_final_extreme <- df_final_extreme[!(df_final_extreme$cons_12m == max(df_final_extreme$cons_12m)),]
+
+plot(df_final_extreme$cons_last_month)
+
+dim(df_final_extreme)
 
 ####################################################################################################################################
 # Data Exploration and Data Quality report  
 ####################################################################################################################################
 # Here make a wrap up of the data: both the quality and what the data tell us already now
-df_final <- df_final_temp 
+df_final <- df_final_extreme 
 View(df_final)
 
 #Temp save
-write_path_temp <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/real_case/1dataUnderstanding/temp.csv"
-write.csv(df_final,file = write_path_temp, row.names=FALSE )
+write_path_temp <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/real_case/1dataUnderstanding/prepped_data_"
+filename_temp <- paste0(write_path_temp, format(Sys.time(), "%Y-%m-%d_%H%M%S_"),".csv")
 
+write.csv(df_final,file = filename_temp, row.names=FALSE )
 
-
-
-
-PARETO- Gjør 8020 på kundene - hvilke kunder tjener vi penger på? Fokus på de!!!
-  net_margin total net margin -> se eirik sin analyse slide 2 --> The Apdekpcbwosbxepsfxclislboipuxpop activity group shows high consumption and net margins
-
-# volum
-eirik: Lite nye kunder, bare 1 som kom inn I fjor, og 11 som kom inn for 2 aar siden.
-
-#Interessante forskjeller I kategorivariabler: mtp CHURN
-
-##########################
-# Quality
-##########################
-# Make some graphs if applicable:
-
-# NAs
-####
-
-# Little variance
-####
-
-# Bugs
-####
-
-# Meaningless columns / values (e.g. phone number, or something that is irrelevant or just dont make sense)
-####
-
-# Uniqueness
-####
 
 
 ##########################
 # Understanding
 ##########################
 # Make some graphs if applicable:
+
+
+
+# Profitability
+plot(df_final$net_margin,df_final$margin_gross_pow_ele)
+plot(df_final$margin_net_pow_ele,df_final$margin_gross_pow_ele)
+
+plot(df_final$num_years_antig,df_final$margin_gross_pow_ele)
+plot(df_final$num_years_antig,df_final$margin_net_pow_ele)
+plot(df_final$num_years_antig,df_final$net_margin)
+
+plot(df_final$nb_prod_act,df_final$margin_gross_pow_ele)
+plot(df_final$nb_prod_act,df_final$margin_net_pow_ele)
+plot(df_final$nb_prod_act,df_final$net_margin)
+
+plot(df_final$cons_last_month,df_final$cons_12m) #looks sensible
+
+plot(df_final$margin_net_pow_ele,df_final$cons_12m*(df_final$price_tot_fix_1+df_final$price_tot_var_1)) 
+plot(df_final$margin_net_pow_ele,df_final$cons_12m*(df_final$price_tot_fix_1+df_final$price_tot_var_1)) 
+
+plot(df_final$margin_net_pow_ele*df_final$cons_12m,df_final$net_margin) 
+plot(df_final$margin_net_pow_ele*df_final$cons_12m,df_final$net_margin*(df_final$price_tot_fix_1+df_final$price_tot_var_1)) 
+
+# Churn
+plot(df_final$margin_net_pow_ele,df_final$churn) 
+plot(df_final$margin_gross_pow_ele,df_final$churn) 
+plot(df_final$net_margin,df_final$churn) 
+
+plot(df_final$num_years_antig,df_final$churn)
+table(df_final$num_years_antig,df_final$churn)
+
+
+# Volum
+##
+# New customers
+hist(df_final$num_years_antig) #very few new customers
+#Lite nye kunder, bare 1 som kom inn I fjor, og 11 som kom inn for 2 aar siden.
+
+#Interessante forskjeller I kategorivariabler: mtp CHURN
+plot(df_final$churn, df_final$channel_sales)
+
 
 # Skewness
 ####
@@ -734,9 +768,5 @@ eirik: Lite nye kunder, bare 1 som kom inn I fjor, og 11 som kom inn for 2 aar s
 # We did here quite some prep - as especially NA treatment in easy tody together with data quality assessment etc..
 # Thus we save the dataset here. This is okay as a first iteration - then move more over to data prep script. 
 # Should work a bit agile and iterative =)
-write_path <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/1dataUnderstanding/df_pre_prepped.csv"
-
-write.csv(df_final,file = write_path, row.names=FALSE )
-
 
 

@@ -2,14 +2,14 @@
 # __version__ = "1.0"
 # __maintainer__ = "Herman Hellenes"
 # __email__ = "herman.hellenes@gmail.com"
-# __creation__ = "22/08/2018"
+# __creation__ = "01/09/2018"
 # __status__ = "Production"
 
 ############################################
 # Mission description
 ############################################
 # Goal: This script carry out the predictive analysis, in order to:
-#      1: Score clients, as who will be most likely to churn
+#      1: Make a model that can score clients, as who will be most likely to churn
 #      2: ...
 
 # Questions: 
@@ -30,8 +30,8 @@ library(xgboost)
 ################################################################################################################################
 # INPUT
 ################################################################################################################################
-pathTrain <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/2dataPreparation/prepared_data_train2018-08-30_102224_.csv"
-pathTest <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/Training/2dataPreparation/prepared_data_test2018-08-30_102225_.csv"
+pathTrain <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/real_case/2dataPreparation/prepared_data_train2018-09-01_121107_.csv"
+pathTest <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/real_case/2dataPreparation/prepared_data_test2018-09-01_121110_.csv"
 
 #Read data
 input_dataTrain <- read.csv(pathTrain,
@@ -42,6 +42,18 @@ input_dataTest <- read.csv(pathTest,
                             sep = ",", dec=".", stringsAsFactors = F)
 dfTest <- input_dataTest
 
+
+pathTrainTrans <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/real_case/2dataPreparation/prepared_data_train_trans2018-09-01_125819_.csv"
+pathTestTrans <- "C:/Users/herman.a.hellenes/Desktop/Case/QuantCase/real_case/2dataPreparation/prepared_data_test_trans2018-09-01_125819_.csv"
+
+#Read data
+input_dataTrainTr <- read.csv(pathTrainTrans,
+                            sep = ",", dec=".", stringsAsFactors = F)
+dfTrainTrans <- input_dataTrainTr
+
+input_dataTestTrans <- read.csv(pathTestTrans,
+                           sep = ",", dec=".", stringsAsFactors = F)
+dfTestTrans <- input_dataTestTrans
 
 ###################
 # Quick formatting
@@ -62,14 +74,8 @@ dfTest <- as.data.frame(lapply(dfTest, as.numeric))
 str(dfTest)
 class(dfTest)
 
-# Take out ID-column
-idTrain <- df$SK_ID_CURR
-df$SK_ID_CURR <- NULL
-
-idTest <- dfTest$SK_ID_CURR
-dfTest$SK_ID_CURR <- NULL
-
-
+dfTestTrans <- as.data.frame(lapply(dfTestTrans, as.numeric))
+dfTrainTrans <- as.data.frame(lapply(dfTrainTrans, as.numeric))
 
 ################################################################################################################################
 # Train model
@@ -83,7 +89,7 @@ dfTest$SK_ID_CURR <- NULL
 # Skewness assessment:
 # See in analysis_savingsmodel_modelling.R techniques for treathing skewed data (Undersampling, Oversampling, 
 # syntethic, cost sensitive learning)
-table(df$TARGET) # how skewed?
+table(df$churn) # 10% - it is not very skewed but substantial
 
 # Business objective:
 # is it e.g. vital not to have any false positives??
@@ -124,22 +130,22 @@ performance_metric <- "auc"
 
 # Here make a test and training set of the training set --> so we can look a bit on the confusion matrix
 set.seed(3456)
-trainQuickIndex <- createDataPartition(df$TARGET, p = .8, 
+trainQuickIndex <- createDataPartition(df$churn, p = .8, 
                                   list = FALSE, 
                                   times = 1)
 dfQuickTrain <- df[ trainQuickIndex,]
 dfQuickTest  <- df[-trainQuickIndex,]
 dim(dfQuickTrain)
 
-dfQuickTrainMat <- as.matrix(dfQuickTrain[,!(colnames(dfQuickTrain) %in% "TARGET")])
+dfQuickTrainMat <- as.matrix(dfQuickTrain[,!(colnames(dfQuickTrain) %in% "churn")])
 dfQuickTestMat <- as.matrix(dfQuickTest)
 
 # Train a xgboost model
 start_time <- Sys.time()
 set.seed(825)
-bst <- xgboost(data = dfQuickTrainMat, label = dfQuickTrain$TARGET, max_depth = 4,
+bst <- xgboost(data = dfQuickTrainMat, label = dfQuickTrain$churn, max_depth = 4,
                eta = 1, nthread = 2, nrounds = 20,objective = "binary:logistic",
-               eval_metric = performance_metric)
+               eval_metric = "auc")
 time_end <- (Sys.time()-start_time)
 
 # Importance
@@ -155,24 +161,33 @@ head(importance)
 predQuick <- predict(bst, dfQuickTestMat)
 pred.classQuick <- ifelse(predQuick >= 0.5, 1,0)
 library(e1071)
-confusionMatrix(data = as.factor(pred.classQuick), reference = as.factor(dfQuickTest$TARGET))
+confusionMatrix(data = as.factor(pred.classQuick), reference = as.factor(dfQuickTest$churn))
 
 
 ######################################################################
 # Param default tuning
 ######################################################################
+####### XGBOOST #############
 #preparing matrix 
-labels <- df$TARGET 
+labels <- df$churn 
 labels <- as.numeric(labels)
-new_tr <- model.matrix(~.+0,data = df[,!(colnames(df) %in% "TARGET")], with = F) 
+new_tr <- model.matrix(~.+0,data = df[,!(colnames(df) %in% "churn")], with = F) 
 dtrain <- xgb.DMatrix(data = new_tr,label = labels) 
 
-ts_label <- dfTest$TARGET
+ts_label <- dfTest$churn
 ts_label <- as.numeric(ts_label)
-new_ts <- model.matrix(~.+0,data = dfTest[,!(colnames(dfTest) %in% "TARGET")], with = F) 
+new_ts <- model.matrix(~.+0,data = dfTest[,!(colnames(dfTest) %in% "churn")], with = F) 
 dtest  <- xgb.DMatrix(data = new_ts,label = ts_label) 
 
+ts_labelT <- dfTestTrans$churn
+ts_labelT <- as.numeric(ts_labelT)
+new_tsT <- model.matrix(~.+0,data = dfTestTrans[,!(colnames(dfTestTrans) %in% "churn")], with = F) 
+dtestTrans  <- xgb.DMatrix(data = new_tsT,label = ts_labelT) 
 
+labelT <- dfTrainTrans$churn
+labelT <- as.numeric(labelT)
+new_trT <- model.matrix(~.+0,data = dfTrainTrans[,!(colnames(dfTrainTrans) %in% "churn")], with = F) 
+dtrainTrans  <- xgb.DMatrix(data = new_trT,label = labelT) 
 
 
 #default parameters
@@ -203,7 +218,7 @@ xgbcv <- xgb.cv( params = params,
                  showsd = T, 
                  stratified = T, 
                  print.every.n = 10, 
-                 early.stop.round = 20, 
+                 early.stop.round = 100, 
                  maximize = F)
 time_end_cv <- (Sys.time()-start_time_cv)
 xgbcv #is test_error_mean low?
@@ -223,18 +238,25 @@ xgb1 <- xgb.train( params = params, data = dtrain, nrounds = 100,
 
 xgb2 <- xgb.train( params = params, data = dtrain, nrounds = 100)
 
+xgbTrans <- xgb.train( params = params, data = dtrainTrans, nrounds = 100)
+
+
+
 #model prediction
 xgbpred <- predict (xgb1,dtest)
 xgbpred <- ifelse (xgbpred > 0.2,1,0)
 xgbpred2 <- predict (xgb2,dtest)
 xgbpred2 <- ifelse (xgbpred2 > 0.05,1,0)
 
+xgbpredTrans <- predict (xgbTrans,dtestTrans)
+
+
 #confusion matrix
 confusionMatrix (as.factor(xgbpred), as.factor(ts_label))
 confusionMatrix(as.factor(xgbpred2), as.factor(ts_label))
 
 #view variable importance plot
-mat <- xgb.importance (feature_names = colnames(new_tr),model = xgb1)
+mat <- xgb.importance (feature_names = colnames(new_tr),model = xgb2)
 xgb.plot.importance (importance_matrix = mat[1:20]) 
 
 # ROC
@@ -253,6 +275,67 @@ maxauc<-max(round(auc, digits = 4))
 minauct <- paste(c("min(AUC) = "),minauc,sep="")
 maxauct <- paste(c("max(AUC) = "),maxauc,sep="")
 legend(0.35,0.6,c(minauct,maxauct,"\n"),border="white",cex=1.4,box.col = "white")
+
+
+# TRANS xgbpredTrans
+pred.roc <- ROCR::prediction(xgbpredTrans, ts_labelT, 
+                             label.ordering = c("0","1")) #ok takes Positive Class = 1
+preformance.roc <- performance(pred.roc, "tpr","fpr")
+plot(preformance.roc, col="black", lty=3, lwd=3)
+auc <- performance(pred.roc,"auc")
+auc <- unlist(slot(auc, "y.values"))
+minauc<-min(round(auc, digits = 4))
+maxauc<-max(round(auc, digits = 4))
+minauct <- paste(c("min(AUC) = "),minauc,sep="")
+maxauct <- paste(c("max(AUC) = "),maxauc,sep="")
+legend(0.35,0.6,c(minauct,maxauct,"\n"),border="white",cex=1.4,box.col = "white")
+
+
+####### gbm #############
+fitControlgbmFit1 <- trainControl(## 10-fold CV
+  method = "repeatedcv",
+  number = 5,
+  ## repeated ten times
+  repeats = 2)
+set.seed(825)
+gbmFit1 <- train(churn ~ ., data = df, 
+                 method = "gbm", 
+                 trControl = fitControlgbmFit1,
+                 ## This last option is actually one
+                 ## for gbm() that passes through
+                 verbose = FALSE)
+gbmFit1
+
+gbmFit1.pred <- predict(gbmFit1, newdata = as.factor(dfTest))
+
+### logreg ####
+#   method = 'logreg'
+fitControlLogRegFit1 <- trainControl(## 10-fold CV
+  method = "repeatedcv",
+  number = 5,
+  ## repeated ten times
+  repeats = 2)
+set.seed(825)
+df.logreg <- df
+df.logreg$churn <- as.factor(df.logreg$churn)
+logregFit1 <- train(churn ~ ., data = df.logreg, 
+                 method = "LogitBoost")
+logregFit1
+logregFit1.pred <- predict(logregFit1, newdata = (dfTest),  type = "prob")
+logregFit1.pred <- ifelse(logregFit1.pred$`0` > 0.001, 0,1)
+confusionMatrix (as.factor(logregFit1.pred), as.factor(dfTest$churn))
+
+#glm
+model_rpart <- glm(churn ~., data=df, family="binomial" )
+model_rpart
+summary(model_rpart) # estimates 
+exp(coef(model_rpart)) # odds ratios
+predict(model_rpart, newdata=dfTest, type="response") # predicted probabilities
+pred = predict(model_rpart, newdata=dfTest)
+confusionMatrix(as.factor(ifelse(pred<(-2),1,0)), as.factor(dfTest$churn))
+### adaboost ####
+#  method = 'adaboost'
+
 
 
 ###################################
